@@ -2,6 +2,7 @@ services:
   - type: web
     name: college-discovery-api
     env: node
+    rootDir: backend
     plan: free
     buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npm start
