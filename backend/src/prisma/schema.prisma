@@ -1,0 +1,290 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum CollegeType {
+  GOVERNMENT
+  PRIVATE
+  DEEMED
+}
+
+enum ExamType {
+  ENGINEERING
+  MEDICAL
+  MBA
+  LAW
+  OTHER
+}
+
+enum CourseLevel {
+  UNDERGRADUATE
+  POSTGRADUATE
+  DIPLOMA
+  DOCTORATE
+}
+
+model College {
+  id               Int            @id @default(autoincrement())
+  name             String
+  slug             String         @unique
+  description      String?        @db.Text
+  logoUrl          String?        @map("logo_url")
+  bannerUrl        String?        @map("banner_url")
+  type             CollegeType
+  establishedYear  Int?           @map("established_year")
+  city             String
+  state            String
+  address          String?
+  pincode          String?
+  websiteUrl       String?        @map("website_url")
+  contactEmail     String?        @map("contact_email")
+  contactPhone     String?        @map("contact_phone")
+  affiliation      String?
+  approval         String?
+  rating           Float          @default(0)
+  totalReviews     Int            @default(0) @map("total_reviews")
+  admissionProcess String?        @map("admission_process") @db.Text
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+
+  courses          CollegeCourse[]
+  exams            CollegeExam[]
+  placements       Placement[]
+  rankings         Ranking[]
+  reviews          Review[]
+  cutoffs          Cutoff[]
+  savedBy          SavedCollege[]
+  questions        Question[]
+
+  @@index([state])
+  @@index([city])
+  @@index([type])
+  @@index([rating])
+  @@index([state, type])
+  @@map("colleges")
+}
+
+model Course {
+  id            Int            @id @default(autoincrement())
+  name          String
+  slug          String         @unique
+  stream        String
+  durationYears Float          @map("duration_years")
+  level         CourseLevel
+  description   String?        @db.Text
+  eligibility   String?        @db.Text
+  avgFee        Float?         @map("avg_fee")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  colleges      CollegeCourse[]
+
+  @@index([stream])
+  @@index([level])
+  @@map("courses")
+}
+
+model CollegeCourse {
+  id          Int     @id @default(autoincrement())
+  collegeId   Int     @map("college_id")
+  courseId     Int     @map("course_id")
+  fee         Float?
+  seats       Int?
+  eligibility String? @db.Text
+
+  college     College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  course      Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([collegeId, courseId])
+  @@index([collegeId])
+  @@index([courseId])
+  @@map("college_courses")
+}
+
+model Exam {
+  id                Int          @id @default(autoincrement())
+  name              String
+  slug              String       @unique
+  fullName          String       @map("full_name")
+  type              ExamType
+  conductingBody    String       @map("conducting_body")
+  examDate          DateTime?    @map("exam_date")
+  registrationStart DateTime?    @map("registration_start")
+  registrationEnd   DateTime?    @map("registration_end")
+  eligibility       String?      @db.Text
+  examPattern       String?      @map("exam_pattern") @db.Text
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  colleges          CollegeExam[]
+  cutoffs           Cutoff[]
+
+  @@index([type])
+  @@map("exams")
+}
+
+model CollegeExam {
+  id        Int     @id @default(autoincrement())
+  collegeId Int     @map("college_id")
+  examId    Int     @map("exam_id")
+
+  college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  exam      Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@unique([collegeId, examId])
+  @@index([collegeId])
+  @@index([examId])
+  @@map("college_exams")
+}
+
+model Placement {
+  id             Int      @id @default(autoincrement())
+  collegeId      Int      @map("college_id")
+  year           Int
+  highestPackage Float?   @map("highest_package")
+  avgPackage     Float?   @map("avg_package")
+  medianPackage  Float?   @map("median_package")
+  placementRate  Float?   @map("placement_rate")
+  topRecruiters  String[] @map("top_recruiters")
+
+  college        College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+  @@map("placements")
+}
+
+model Ranking {
+  id        Int     @id @default(autoincrement())
+  collegeId Int     @map("college_id")
+  body      String
+  rank      Int
+  year      Int
+
+  college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([collegeId, body, year])
+  @@index([collegeId])
+  @@map("rankings")
+}
+
+model Cutoff {
+  id        Int     @id @default(autoincrement())
+  collegeId Int     @map("college_id")
+  examId    Int     @map("exam_id")
+  courseId   Int?   @map("course_id")
+  category  String
+  minRank   Int     @map("min_rank")
+  maxRank   Int?    @map("max_rank")
+  year      Int
+
+  college   College @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  exam      Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+  @@index([examId])
+  @@map("cutoffs")
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  name          String
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  avatarUrl     String?        @map("avatar_url")
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  reviews       Review[]
+  savedColleges SavedCollege[]
+  questions     Question[]
+  answers       Answer[]
+
+  @@map("users")
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  collegeId Int      @map("college_id")
+  userId    Int      @map("user_id")
+  rating    Float
+  title     String
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([collegeId])
+  @@index([userId])
+  @@map("reviews")
+}
+
+model SavedCollege {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  collegeId Int      @map("college_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college   College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, collegeId])
+  @@index([userId])
+  @@map("saved_colleges")
+}
+
+model Article {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  excerpt     String?
+  content     String   @db.Text
+  coverImage  String?  @map("cover_image")
+  authorName  String   @map("author_name")
+  category    String?
+  tags        String[]
+  readTime    Int?     @map("read_time")
+  publishedAt DateTime @default(now()) @map("published_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([slug])
+  @@index([category])
+  @@map("articles")
+}
+
+model Question {
+  id        Int      @id @default(autoincrement())
+  title     String
+  body      String   @db.Text
+  userId    Int      @map("user_id")
+  collegeId Int?     @map("college_id")
+  tags      String[]
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  college   College? @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  answers   Answer[]
+
+  @@index([userId])
+  @@index([collegeId])
+  @@map("questions")
+}
+
+model Answer {
+  id         Int      @id @default(autoincrement())
+  questionId Int      @map("question_id")
+  userId     Int      @map("user_id")
+  body       String   @db.Text
+  upvotes    Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@index([userId])
+  @@map("answers")
+}
