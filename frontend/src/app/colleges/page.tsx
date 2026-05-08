@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, Suspense } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
@@ -11,7 +11,7 @@ import Pagination from '@/components/ui/Pagination';
 import Loader from '@/components/ui/Loader';
 import EmptyState from '@/components/ui/EmptyState';
 
-export default function CollegesPage() {
+function CollegesContent() {
   const searchParams = useSearchParams();
 
   const [filters, setFilters] = useState({
@@ -102,5 +102,13 @@ export default function CollegesPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CollegesPage() {
+  return (
+    <Suspense fallback={<div className="page container"><Loader text="Loading colleges..." /></div>}>
+      <CollegesContent />
+    </Suspense>
   );
 }
